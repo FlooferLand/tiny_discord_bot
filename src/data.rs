@@ -12,6 +12,7 @@ pub fn save_data(data: &BotData) -> Result<(), Error> {
 			match serde_yml::to_string(&server) {
 				Ok(out) => {
 					let path = format!("./assets/data/servers/{key}.yml");
+					let _ = std::fs::create_dir_all("./assets/data/servers/");
 					if let Err(write_err) = std::fs::write(path, out) {
 						return Err(anyhow!("Saving error (DISK): `{write_err}`"));
 					}

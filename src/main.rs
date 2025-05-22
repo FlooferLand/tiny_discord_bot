@@ -45,6 +45,7 @@ async fn main() {
 
                 // Loading server data
                 let mut servers = HashMap::new();
+                let _ = std::fs::create_dir_all("./assets/data/servers/");
                 let servers_dir = std::fs::read_dir("./assets/data/servers/").unwrap();
                 for entry in servers_dir {
                     let Ok(dir) = entry else { continue };

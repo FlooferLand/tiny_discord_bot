@@ -3,6 +3,7 @@ mod fake_user;
 mod event_handler;
 mod asset_manager;
 mod data;
+mod error;
 
 use crate::commands::char_use::say_as;
 use crate::commands::info::info;
@@ -12,15 +13,15 @@ use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{ActivityData, OnlineStatus, ShardId, ShardManager, ShardRunnerInfo};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use poise::futures_util::lock::MutexGuard;
-use poise::serenity_prelude::prelude::TypeMapKey;
+use poise::serenity_prelude::prelude::{SerenityError, TypeMapKey};
 use crate::commands::save::save;
+use crate::error::{BotError, BotErrorExt};
 
 struct BotData {
     pub servers: Arc<RwLock<HashMap<u64, Server>>>,
 }
-type Error = anyhow::Error;
-type Context<'a> = poise::Context<'a, BotData, Error>;
+
+type Context<'a> = poise::Context<'a, BotData, BotError>;
 
 #[tokio::main]
 async fn main() {
@@ -41,7 +42,7 @@ async fn main() {
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 // Register commands
-                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                poise::builtins::register_globally(ctx, &framework.options().commands).await.bot_err()?;
 
                 // Loading server data
                 let mut servers = HashMap::new();

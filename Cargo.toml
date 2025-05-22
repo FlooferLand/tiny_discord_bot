@@ -15,6 +15,5 @@ poise = "0.6"
 tokio = { version = "1.44", features = ["rt", "rt-multi-thread", "macros"] }
 serde = "1.0"
 serde_yml = "0.0"
-anyhow = "1.0"
 pest = "2.8"
 pest_derive = "2.8"

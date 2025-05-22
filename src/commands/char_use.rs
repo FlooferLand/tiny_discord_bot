@@ -1,30 +1,27 @@
 use crate::fake_user::{FakeUser, WebhookMessage};
-use crate::{Context, Error};
-use anyhow::anyhow;
+use crate::{Context, BotError};
 use poise::CreateReply;
-use poise::serenity_prelude::ChannelId;
 use poise::serenity_prelude::json::{json, Value};
-use crate::data::servers::ServerCharacter;
+use crate::error::{BotErrorMsgExt, BotErrorExt};
 
 #[poise::command(slash_command, rename="sayas", aliases("say", "sayas", "say_as"))]
 pub async fn say_as(
     ctx: Context<'_>,
     #[description = "ID"] id: String,
     #[description = "Content"] content: String
-) -> Result<(), Error> {
+) -> Result<(), BotError> {
     let channel_id = ctx.channel_id().get();
-    let Ok(channel_hooks) = ctx.guild_channel().await.unwrap().webhooks(ctx.http()).await else { return Err(anyhow!("Unable to find channel webhooks")) };
-    let Some(guild_id) = ctx.guild_id() else { return Err(anyhow!("No guild ID found")) };
+    let guild_id = ctx.guild_id().bot_err("No guild ID found")?;
     let hook_block = {
         let (display_name, avatar_url, has_hook_for_channel) = {
-            let Ok(server_read) = ctx.data().servers.try_read() else { return Err(anyhow!("Unable to unlock server read lock")) };
-            let Some(server) = server_read.get(&guild_id.get()) else { return Err(anyhow!("Unknown server")) };
-            let Some(char_read) = server.characters.get(&id) else { return Err(anyhow!("Character '{id}' not found")) };
+            let server_read = ctx.data().servers.read().bot_err()?;
+            let server = server_read.get(&guild_id.get()).bot_err("Unable to find server")?;
+            let char_read = server.characters.get(&id).bot_err("Failed to find character")?;
             Ok::<(String, String, bool), String>((char_read.display_name.clone(), char_read.avatar_url.clone(), char_read.hooks.contains_key(&channel_id)))
         }.unwrap();
 
         if has_hook_for_channel {
-            let server_read = ctx.data().servers.try_read().unwrap();
+            let server_read = ctx.data().servers.read().bot_err()?;
             let server = server_read.get(&guild_id.get()).unwrap();
             let char_read = server.characters.get(&id).unwrap();
             Ok(char_read.hooks.get(&channel_id).unwrap().clone())
@@ -35,9 +32,9 @@ pub async fn say_as(
                 ctx.channel_id(),
                 &Value::Object(map.clone()),
                 None
-            ).await?;
+            ).await.bot_err()?;
             let Ok(hook_url) = webhook.url() else {
-                return Err(anyhow!("Failed getting webhook URL after creation"))
+                return Err(BotError::Str("Failed getting webhook URL after creation"))
             };
             if let Ok(mut write) = ctx.data().servers.try_write() {
                 let server_write = write.get_mut(&guild_id.get()).unwrap();
@@ -45,7 +42,7 @@ pub async fn say_as(
                 char_write.hooks.insert(channel_id, hook_url.clone());
                 Ok(hook_url)
             } else {
-                Err(anyhow!("Unable to unlock server write lock"))
+                Err(BotError::Str("Unable to unlock server write lock"))
             }
         }
     };
@@ -64,7 +61,7 @@ pub async fn say_as(
         ).await;
 
     };
-    ctx.send(CreateReply::default().content("-# Sent!").ephemeral(true)).await?;
+    ctx.send(CreateReply::default().content("-# Sent!").ephemeral(true)).await.bot_err()?;
     Ok(())
 }
 

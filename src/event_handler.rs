@@ -1,20 +1,19 @@
-use anyhow::anyhow;
 use poise::FrameworkError;
 use crate::serenity;
 use poise::serenity_prelude::{CacheHttp, FullEvent, RoleId};
-use crate::{BotData, Error};
+use crate::{BotData, BotError};
 use crate::data::servers::Server;
 
-pub async fn error_handler(error: FrameworkError<'_, BotData, Error>) -> Box<()> {
+pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) -> Box<()> {
     Box::new(())
 }
 
 pub async fn event_handler(
     ctx: &serenity::Context,
     event: &FullEvent,
-    _framework: poise::FrameworkContext<'_, BotData, Error>,
+    _framework: poise::FrameworkContext<'_, BotData, BotError>,
     data: &BotData,
-) -> Result<(), Error> {
+) -> Result<(), BotError> {
     match event {
         FullEvent::GuildCreate { guild, .. } => {
             if let Ok(mut server_write) = data.servers.try_write() {

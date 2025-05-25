@@ -25,7 +25,7 @@ type Context<'a> = poise::Context<'a, BotData, BotError>;
 
 #[tokio::main]
 async fn main() {
-    let token = std::env::var("DISCORD_TOKEN").expect("env 'DISCORD_TOKEN' should be set");
+    let token = std::env::var("TINY_BOT_TOKEN").expect("env 'TINY_BOT_TOKEN' should be set");
     let intents = serenity::GatewayIntents::privileged();
     
     let framework = poise::Framework::builder()

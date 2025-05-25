@@ -7,7 +7,7 @@ pub struct Server {
     pub characters: HashMap<String, ServerCharacter>
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct ServerCharacter {
     pub display_name: String,
     pub avatar_url: String,

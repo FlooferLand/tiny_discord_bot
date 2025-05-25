@@ -1,12 +1,14 @@
 use std::fmt::{Display, Formatter};
 use std::sync::LockResult;
 use poise::serenity_prelude::prelude::SerenityError;
+use crate::fake_user::FakeUserError;
 
 #[derive(Debug)]
 pub enum BotError {
 	Serenity(SerenityError),
 	String(String),
 	Str(&'static str),
+	FakeUser(FakeUserError)
 }
 
 impl Display for BotError {
@@ -33,6 +35,11 @@ pub trait BotErrorMsgExt<V> {
 impl<V> BotErrorExt<V> for Result<V, SerenityError> {
 	fn bot_err(self) -> Result<V, BotError> {
 		self.map_err(|err| BotError::Serenity(err))
+	}
+}
+impl<V> BotErrorExt<V> for Result<V, String> {
+	fn bot_err(self) -> Result<V, BotError> {
+		self.map_err(|err| BotError::String(err))
 	}
 }
 impl<V> BotErrorMsgExt<V> for Option<V> {

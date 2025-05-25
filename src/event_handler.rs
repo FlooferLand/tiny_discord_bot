@@ -16,7 +16,7 @@ pub async fn event_handler(
 ) -> Result<(), BotError> {
     match event {
         FullEvent::GuildCreate { guild, .. } => {
-            if let Ok(mut server_write) = data.servers.try_write() {
+            if let Ok(mut server_write) = data.servers.write() {
                 server_write.insert(guild.id.get(), Server::default());
             }
         }

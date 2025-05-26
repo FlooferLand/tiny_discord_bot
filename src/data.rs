@@ -1,7 +1,34 @@
+use std::collections::HashMap;
 use crate::{BotData, BotError, err_fmt};
+use crate::data::servers::Server;
+
 pub mod servers;
 
-// TODO: Move loading server data over here
+/// Panics if it can't load the data
+pub fn load_data() -> (HashMap<u64, Server>)  {
+	// Loading server data
+	let mut servers = HashMap::new();
+	let _ = std::fs::create_dir_all("./assets/data/servers/");
+	let servers_dir = std::fs::read_dir("./assets/data/servers/").unwrap();
+	for entry in servers_dir {
+		let Ok(dir) = entry else { continue };
+		let Ok(server_text) = std::fs::read_to_string(dir.path()) else {
+			panic!("Failed to parse server data");
+		};
+		let Ok(server_id) = dir.path().file_stem().unwrap_or(dir.file_name().as_os_str()).to_string_lossy().parse::<u64>() else {
+			panic!("Failed to parse server ID");
+		};;
+		match serde_yml::from_str(server_text.as_str()) {
+			Ok(server_data) => {
+				servers.insert(server_id, server_data);
+			}
+			Err(err) => {
+				panic!("Failed to deserialize server data: {err}");
+			}
+		};
+	}
+	(servers)
+}
 
 pub fn save_data(data: &BotData) -> Result<(), BotError> {
 	// Saving servers
@@ -16,7 +43,7 @@ pub fn save_data(data: &BotData) -> Result<(), BotError> {
 					}
 				}
 				Err(err) => {
-					return Err(err_fmt!("Saving error (YML): `{err}`"));
+					return Err(err_fmt!("Saving error (SERDE): `{err}`"));
 				}
 			}
 		}

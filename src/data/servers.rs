@@ -16,5 +16,5 @@ pub struct ServerCharacter {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct ServerRoles {
-    pub moderator: u64
+    pub moderator: Option<u64>
 }

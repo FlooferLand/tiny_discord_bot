@@ -4,17 +4,21 @@ mod event_handler;
 mod asset_manager;
 mod data;
 mod error;
+mod util;
 
 use crate::commands::char_use::say_as;
 use crate::commands::info::info;
 use crate::data::servers::Server;
-use crate::event_handler::event_handler;
-use poise::serenity_prelude as serenity;
+use crate::event_handler::{error_handler, event_handler};
+use poise::{serenity_prelude as serenity, FrameworkError};
 use poise::serenity_prelude::{ActivityData, OnlineStatus, ShardId, ShardManager, ShardRunnerInfo};
 use std::collections::HashMap;
+use std::process::ExitCode;
 use std::sync::{Arc, RwLock};
 use poise::serenity_prelude::prelude::{SerenityError, TypeMapKey};
+use crate::commands::char_add::create_char;
 use crate::commands::save::save;
+use crate::data::load_data;
 use crate::error::{BotError, BotErrorExt};
 
 struct BotData {
@@ -34,9 +38,9 @@ async fn main() {
                 Box::pin(event_handler(ctx, event, framework, data))
             },
             commands: vec![
-                info(), say_as(), save()
+                info(), say_as(), create_char(), save()
             ],
-            // on_error: error_handler,
+            on_error: |error| Box::pin(error_handler(error)),
             .. Default::default()
         })
         .setup(|ctx, _ready, framework| {
@@ -44,27 +48,8 @@ async fn main() {
                 // Register commands
                 poise::builtins::register_globally(ctx, &framework.options().commands).await.bot_err()?;
 
-                // Loading server data
-                let mut servers = HashMap::new();
-                let _ = std::fs::create_dir_all("./assets/data/servers/");
-                let servers_dir = std::fs::read_dir("./assets/data/servers/").unwrap();
-                for entry in servers_dir {
-                    let Ok(dir) = entry else { continue };
-                    let Ok(server_text) = std::fs::read_to_string(dir.path()) else {
-                        panic!("Failed to parse server data");
-                    };
-                    let Ok(server_id) = dir.path().file_stem().unwrap_or(dir.file_name().as_os_str()).to_string_lossy().parse::<u64>() else {
-                        panic!("Failed to parse server ID");
-                    };;
-                    match serde_yml::from_str::<Server>(server_text.as_str()) {
-                        Ok(server_data) => {
-                            servers.insert(server_id, server_data);
-                        }
-                        Err(err) => {
-                            panic!("Failed to deserialize server data: {err}");
-                        }
-                    };
-                }
+                // Loading in data
+                let (servers) = load_data();
 
                 // Status
                 println!("Bot online!");
@@ -84,4 +69,12 @@ async fn main() {
         .framework(framework)
         .await.unwrap();
     client.start().await.unwrap();
+
+    // Shutting down the bot
+    let shard_manager = client.shard_manager.clone();
+    let shard_runners = shard_manager.runners.lock().await;
+    for (_id, runner) in shard_runners.iter() {
+        runner.runner_tx.set_status(OnlineStatus::Offline);
+    }
+    println!("Bot stopped!");
 }

@@ -1,11 +1,28 @@
-use poise::FrameworkError;
+use poise::{BoxFuture, FrameworkError};
 use crate::serenity;
-use poise::serenity_prelude::{CacheHttp, FullEvent, RoleId};
+use poise::serenity_prelude::{CacheHttp, FullEvent, MessageBuilder, RoleId};
 use crate::{BotData, BotError};
 use crate::data::servers::Server;
 
-pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) -> Box<()> {
-    Box::new(())
+pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
+    match error {
+        FrameworkError::Command { error, ctx, .. } => {
+            let text = match error {
+                BotError::String(value) => value,
+                BotError::Str(value) => value.to_string(),
+                e => MessageBuilder::new().push_mono(e.to_string()).build()
+            };
+            let message = MessageBuilder::new()
+                .push_bold("ERROR:").push(" ").push_safe(text)
+                .build();
+            ctx.send(
+                poise::CreateReply::default()
+                    .ephemeral(true)
+                    .content(message)
+            ).await.map(|_| ()).unwrap()
+        },
+        error => poise::builtins::on_error(error).await.unwrap(),
+    };
 }
 
 pub async fn event_handler(

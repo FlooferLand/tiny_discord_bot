@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use crate::data::save_data;
-use crate::{Context, BotError};
-use poise::CreateReply;
-use poise::serenity_prelude::json::{json, Value};
-use crate::data::servers::ServerCharacter;
-use crate::error::{BotErrorMsgExt, BotErrorExt};
+use crate::data::servers::{Server, ServerCharacter};
+use crate::error::BotErrorMsgExt;
+use crate::util::swallow_interaction;
+use crate::{err_fmt, BotError, Context};
+use std::collections::HashMap;
+use poise::serenity_prelude::UserId;
 
 #[poise::command(slash_command, aliases("createchar"))]
 pub async fn create_char(
@@ -15,25 +15,43 @@ pub async fn create_char(
 ) -> Result<(), BotError> {
 	let guild_id = ctx.guild_id().bot_err("No guild ID found")?;
 
-	let mut init = json!({ "name": display_name, "avatar_url": avatar_url });
-	let map = init.as_object_mut().bot_err("Failed making webhook")?;
-	let webhook = ctx.http().create_webhook(
-		ctx.channel_id(),
-		&Value::Object(map.clone()),
-		None
-	).await.bot_err()?;
+	// Checking things
+	let id = id.to_ascii_lowercase().replace(' ', "_");
+	let avatar_url = if avatar_url.starts_with("http") {
+		avatar_url
+	} else {
+		if let Ok(id) = avatar_url.parse::<u64>() {
+			if let Ok(user) = ctx.http().get_user(UserId::new(id)).await {
+				match user.avatar_url() {
+					Some(avatar_url) => avatar_url,
+					None => user.default_avatar_url()
+				}
+			} else {
+				return Err(err_fmt!("It says '{}' doofus, input a valid URL!\nI secretly do possess the ability of parsing user IDs, but you didn't even give me a valid ID!", stringify!(avatar_url)));
+			}
+		} else {
+			return Err(err_fmt!("It says '{}' doofus, input a valid URL!", stringify!(avatar_url)));
+		}
+	};
 
+	// Writing the new character
 	if let Ok(mut servers_write) = ctx.data().servers.write() {
-		let server = servers_write.get_mut(&guild_id.get()).bot_err("Unknown server")?;
+		let server = match servers_write.get_mut(&guild_id.get()) {
+			None => {
+				// Initializing a server if it doesn't exist
+				servers_write.insert(guild_id.get(), Server::default());
+				servers_write.get_mut(&guild_id.get()).bot_err("Unable to initialize new server")?
+			}
+			Some(value) => value
+		};
 		if server.characters.contains_key(&id) {
 			return Err(BotError::Str("Character already exists!"))
 		}
 		
-		let mut hooks = HashMap::new();
-		hooks.insert(ctx.channel_id().get(), webhook.url().bot_err()?);
+		let hooks = HashMap::new();
 		server.characters.insert(id, ServerCharacter { display_name, avatar_url, hooks });
 	}
 
-	ctx.send(CreateReply::default().content("-# Saved!").ephemeral(true)).await.bot_err()?;
+	swallow_interaction(ctx).await;
 	save_data(ctx.data())
 }

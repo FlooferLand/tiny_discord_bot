@@ -2,6 +2,8 @@ use crate::error::{BotErrorExt, BotErrorMsgExt};
 use crate::fake_user::{FakeUserError, FakeUserMaker, WebhookMessage};
 use crate::{BotError, Context};
 use poise::CreateReply;
+use crate::data::servers::Server;
+use crate::util::swallow_interaction;
 
 #[poise::command(slash_command, rename="sayas", aliases("say", "sayas", "say_as"))]
 pub async fn say_as(
@@ -14,7 +16,16 @@ pub async fn say_as(
     // Getting the character
     let char = {
         let server_read = ctx.data().servers.read().bot_err()?;
-        let server = server_read.get(&guild_id.get()).bot_err("Unable to find server")?;
+        let server = match server_read.get(&guild_id.get()) {
+            None => {
+                // Initializing a server if it doesn't exist
+                if let Ok(mut write) = ctx.data().servers.write() {
+                    write.insert(guild_id.get(), Server::default());
+                }
+                server_read.get(&guild_id.get()).bot_err("Unable to initialize new server")?
+            }
+            Some(value) => value
+        };
         server.characters.get(&id).bot_err("Unable to find character")?.clone()
     };
 
@@ -76,7 +87,7 @@ pub async fn say_as(
         User = ctx.author().display_name()
     );
 
-    ctx.send(CreateReply::default().content("-# Sent!").ephemeral(true)).await.bot_err()?;
+    swallow_interaction(ctx).await;
     Ok(())
 }
 

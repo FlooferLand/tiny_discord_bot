@@ -1,10 +1,12 @@
 use crate::data::save_data;
-use crate::data::servers::{Server, ServerCharacter};
-use crate::error::BotErrorMsgExt;
-use crate::util::swallow_interaction;
+use crate::data::servers::ServerCharacter;
+use crate::util::{consume_interaction, write_server};
 use crate::{err_fmt, BotError, Context};
-use std::collections::HashMap;
 use poise::serenity_prelude::UserId;
+use std::collections::HashMap;
+
+pub const CREATE_CHAR_NAME: &str = "create_char";
+pub const CREATE_CHAR_ID: u64 = 1376351248919429183;
 
 #[poise::command(slash_command, aliases("createchar"))]
 pub async fn create_char(
@@ -13,8 +15,6 @@ pub async fn create_char(
 	#[description = "The name that will be shown to users"] display_name: String,
 	#[description = "URL for the avatar; Must end in png, webp, etc"] avatar_url: String
 ) -> Result<(), BotError> {
-	let guild_id = ctx.guild_id().bot_err("No guild ID found")?;
-
 	// Checking things
 	let id = id.to_ascii_lowercase().replace(' ', "_");
 	let avatar_url = if avatar_url.starts_with("http") {
@@ -35,23 +35,16 @@ pub async fn create_char(
 	};
 
 	// Writing the new character
-	if let Ok(mut servers_write) = ctx.data().servers.write() {
-		let server = match servers_write.get_mut(&guild_id.get()) {
-			None => {
-				// Initializing a server if it doesn't exist
-				servers_write.insert(guild_id.get(), Server::default());
-				servers_write.get_mut(&guild_id.get()).bot_err("Unable to initialize new server")?
-			}
-			Some(value) => value
-		};
+	let new_char = ServerCharacter { display_name, avatar_url, hooks: HashMap::new() };
+	write_server(ctx, move |server| {
 		if server.characters.contains_key(&id) {
 			return Err(BotError::Str("Character already exists!"))
 		}
-		
-		let hooks = HashMap::new();
-		server.characters.insert(id, ServerCharacter { display_name, avatar_url, hooks });
-	}
 
-	swallow_interaction(ctx).await;
+		server.characters.insert(id.clone(), new_char);
+		Ok(())
+	})?;
+
+	consume_interaction(ctx).await;
 	save_data(ctx.data())
 }

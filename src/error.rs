@@ -58,3 +58,24 @@ impl<V> BotErrorExt<V> for LockResult<V> {
 		}
 	}
 }
+
+// Result utilities
+pub trait OkExt<O, E> {
+	fn ok(self) -> Result<O, E>;
+}
+impl<O, E> OkExt<O, E> for O {
+	fn ok(self) -> Result<O, E> {
+		Ok(self)
+	}
+}
+
+// Option utilities
+pub trait SomeExt<O> {
+	fn some(self) -> Option<O>;
+}
+
+impl<O> SomeExt<O> for O {
+	fn some(self) -> Option<O> {
+		Some(self)
+	}
+}

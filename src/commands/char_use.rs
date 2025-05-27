@@ -1,9 +1,10 @@
-use crate::error::{BotErrorExt, BotErrorMsgExt};
+use crate::error::{BotErrorMsgExt, OkExt};
 use crate::fake_user::{FakeUserError, FakeUserMaker, WebhookMessage};
+use crate::util::{consume_interaction, read_server};
 use crate::{BotError, Context};
-use poise::CreateReply;
-use crate::data::servers::Server;
-use crate::util::swallow_interaction;
+
+pub const SAYAS_NAME: &str = "sayas";
+pub const SAYAS_ID: u64 = 1376030760858816523;
 
 #[poise::command(slash_command, rename="sayas", aliases("say", "sayas", "say_as"))]
 pub async fn say_as(
@@ -14,20 +15,9 @@ pub async fn say_as(
     let guild_id = ctx.guild_id().bot_err("No guild ID found")?;
 
     // Getting the character
-    let char = {
-        let server_read = ctx.data().servers.read().bot_err()?;
-        let server = match server_read.get(&guild_id.get()) {
-            None => {
-                // Initializing a server if it doesn't exist
-                if let Ok(mut write) = ctx.data().servers.write() {
-                    write.insert(guild_id.get(), Server::default());
-                }
-                server_read.get(&guild_id.get()).bot_err("Unable to initialize new server")?
-            }
-            Some(value) => value
-        };
-        server.characters.get(&id).bot_err("Unable to find character")?.clone()
-    };
+    let char = read_server(ctx, |server| {
+        server.characters.get(&id).bot_err("Unable to find character")?.clone().ok()
+    })?;
 
     // If the hook already exists..
     let mut has_existing_hook = true;
@@ -87,7 +77,7 @@ pub async fn say_as(
         User = ctx.author().display_name()
     );
 
-    swallow_interaction(ctx).await;
+    consume_interaction(ctx).await;
     Ok(())
 }
 

@@ -6,20 +6,19 @@ mod data;
 mod error;
 mod util;
 
+use crate::commands::char_add::create_char;
 use crate::commands::char_use::say_as;
 use crate::commands::info::info;
-use crate::data::servers::Server;
-use crate::event_handler::{error_handler, event_handler};
-use poise::{serenity_prelude as serenity, FrameworkError};
-use poise::serenity_prelude::{ActivityData, OnlineStatus, ShardId, ShardManager, ShardRunnerInfo};
-use std::collections::HashMap;
-use std::process::ExitCode;
-use std::sync::{Arc, RwLock};
-use poise::serenity_prelude::prelude::{SerenityError, TypeMapKey};
-use crate::commands::char_add::create_char;
 use crate::commands::save::save;
 use crate::data::load_data;
+use crate::data::servers::Server;
 use crate::error::{BotError, BotErrorExt};
+use crate::event_handler::{error_handler, event_handler};
+use poise::serenity_prelude::{ActivityData, OnlineStatus};
+use poise::serenity_prelude as serenity;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
+use crate::commands::char_list::list_chars;
 
 struct BotData {
     pub servers: Arc<RwLock<HashMap<u64, Server>>>,
@@ -38,7 +37,9 @@ async fn main() {
                 Box::pin(event_handler(ctx, event, framework, data))
             },
             commands: vec![
-                info(), say_as(), create_char(), save()
+                info(),
+                create_char(), say_as(), list_chars(),
+                save()
             ],
             on_error: |error| Box::pin(error_handler(error)),
             .. Default::default()
@@ -70,11 +71,14 @@ async fn main() {
         .await.unwrap();
     client.start().await.unwrap();
 
-    // Shutting down the bot
+    // Graceful shutdown
     let shard_manager = client.shard_manager.clone();
-    let shard_runners = shard_manager.runners.lock().await;
-    for (_id, runner) in shard_runners.iter() {
-        runner.runner_tx.set_status(OnlineStatus::Offline);
-    }
-    println!("Bot stopped!");
+    let _ = ctrlc::set_handler(move || {
+        let shard_runners = shard_manager.runners.blocking_lock();
+        for (_id, runner) in shard_runners.iter() {
+            runner.runner_tx.set_status(OnlineStatus::Offline);
+        }
+        println!("Bot stopped!");
+        std::process::exit(0);
+    });
 }

@@ -1,9 +1,7 @@
-#![allow(unused)]
-
-use std::sync::{LockResult, RwLock};
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use log::{Level, LevelFilter, Log, Metadata, Record, SetLoggerError};
+use std::sync::RwLock;
 
 const LOG_LEVEL: LevelFilter = LevelFilter::Debug;
 lazy_static! {

@@ -1,7 +1,6 @@
 use crate::error::{BotErrorExt, BotErrorMsgExt};
 use crate::util::write_server;
 use poise::CreateReply;
-use crate::data::save_data;
 
 /// Remove a character (warning: there is no removal confirmation)
 #[poise::command(slash_command, rename="remove")]

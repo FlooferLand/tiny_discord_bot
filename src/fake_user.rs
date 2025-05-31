@@ -1,16 +1,11 @@
-#![allow(unused)]
-
-use std::sync::Arc;
-use poise::futures_util::TryStreamExt;
-use poise::serenity_prelude::{Channel, CreateAttachment, CreateWebhook, Guild, GuildId, ImageHash, Webhook, WebhookId};
-use crate::Context;
 use crate::error::{BotError, BotErrorExt, BotErrorMsgExt};
 use crate::serenity::builder::ExecuteWebhook;
 use crate::serenity::http::Http;
-use crate::serenity::json::{json, Value};
 use crate::serenity::model::channel::Message;
-use crate::serenity::model::id::{ChannelId, UserId};
+use crate::serenity::model::id::ChannelId;
 use crate::serenity::model::prelude::User;
+use crate::Context;
+use poise::serenity_prelude::{CreateAttachment, CreateWebhook, GuildId};
 
 // let name = format!(
 //     "{name}{0}˞",
@@ -18,16 +13,20 @@ use crate::serenity::model::prelude::User;
 // );
 
 type WebhookMessageBuilder = ExecuteWebhook;
+
+#[allow(dead_code)]
 pub enum WebhookMessage {
     Text(String),
     Builder(WebhookMessageBuilder)
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum FakeUserError {
 	InvalidWebhook { webhook_url: String }
 }
 
+#[allow(unused)]
 pub struct FakeUser<'a> {
 	webhook_url: Option<String>,
 	avatar_url: String,
@@ -87,7 +86,7 @@ impl<'a> FakeUser<'a> {
 		message.delete(&ctx.http()).await.bot_err()?;
 		FakeUserMaker::new(ctx)
 			.user(message.author.clone()).await?
-			.send(WebhookMessage::Text(message.content.to_owned()))
+			.send(WebhookMessage::Text(new_text))
 			.await
 	}
 }
@@ -122,7 +121,7 @@ impl<'a> FakeUserMaker<'a> {
 	/// **NOTE:** If the webhook provided doesn't exist,
 	/// it will return [`FakeUserError::InvalidWebhook`].
 	pub async fn existing(self, webhook_url: &str, backup_name: &str, backup_avatar_url: &str) -> Result<FakeUser<'a>, BotError> {
-		let Ok(webhook) = self.http.get_webhook_from_url(webhook_url).await else {
+		if let Err(_) = self.http.get_webhook_from_url(webhook_url).await {
 			return Err(BotError::FakeUser(FakeUserError::InvalidWebhook { webhook_url: webhook_url.to_string() }))
 		};
 		Ok(FakeUser {

@@ -1,4 +1,4 @@
-use log::{debug, error};
+use log::debug;
 use crate::data::servers::Server;
 use crate::serenity;
 use crate::{BotData, BotError};

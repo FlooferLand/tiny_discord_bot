@@ -18,7 +18,7 @@ use poise::serenity_prelude as serenity;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
-use log::{debug, error, info};
+use log::info;
 use crate::commands::char::char;
 use crate::logger::Logger;
 

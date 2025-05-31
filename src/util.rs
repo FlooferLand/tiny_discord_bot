@@ -1,5 +1,6 @@
 use crate::Context;
 use poise::CreateReply;
+use crate::data::save_data;
 use crate::data::servers::Server;
 use crate::error::{BotError, BotErrorExt, BotErrorMsgExt};
 
@@ -26,21 +27,26 @@ where Out: 'static,
 	reader(server)
 }
 
-/// Write something to a server's data
+/// Write something to a server's data.
+/// Automatically writes the new data to disk.
 pub fn write_server<Func, Out>(ctx: Context, writer: Func) -> Result<Out, BotError>
 where Func: FnOnce(&mut Server) -> Result<Out, BotError> {
 	let guild_id = ctx.guild_id().bot_err("No guild ID found")?;
 
-	let mut servers_write = ctx.data().servers.write().bot_err()?;
-	let server = match servers_write.get_mut(&guild_id.get()) {
-		None => {
-			// Initializing a server if it doesn't exist
-			servers_write.insert(guild_id.get(), Server::default());
-			servers_write.get_mut(&guild_id.get()).bot_err("Unable to initialize new server")?
-		}
-		Some(value) => value
+	let out = {
+		let mut servers_write = ctx.data().servers.write().bot_err()?;
+		let server = match servers_write.get_mut(&guild_id.get()) {
+			None => {
+				// Initializing a server if it doesn't exist
+				servers_write.insert(guild_id.get(), Server::default());
+				servers_write.get_mut(&guild_id.get()).bot_err("Unable to initialize new server")?
+			}
+			Some(value) => value
+		};
+		writer(server)
 	};
-	writer(server)
+	save_data(ctx.data())?;
+	out
 }
 
 // String manipulation

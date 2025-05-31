@@ -1,14 +1,13 @@
 mod commands;
 mod fake_user;
 mod event_handler;
-mod asset_manager;
 mod data;
 mod error;
 mod util;
+mod log;
 
-use crate::commands::char_add::create_char;
-use crate::commands::char_use::say_as;
-use crate::commands::info::info;
+use crate::commands::char::char_use::say_as;
+use crate::commands::info::bot_info;
 use crate::commands::save::save;
 use crate::data::load_data;
 use crate::data::servers::Server;
@@ -18,7 +17,8 @@ use poise::serenity_prelude::{ActivityData, OnlineStatus};
 use poise::serenity_prelude as serenity;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::commands::char_list::list_chars;
+use chrono::Utc;
+use crate::commands::char::char;
 
 struct BotData {
     pub servers: Arc<RwLock<HashMap<u64, Server>>>,
@@ -37,8 +37,8 @@ async fn main() {
                 Box::pin(event_handler(ctx, event, framework, data))
             },
             commands: vec![
-                info(),
-                create_char(), say_as(), list_chars(),
+                bot_info(),
+                char(), say_as(),
                 save()
             ],
             on_error: |error| Box::pin(error_handler(error)),
@@ -50,10 +50,11 @@ async fn main() {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await.bot_err()?;
 
                 // Loading in data
+                #[allow(unused_parens)]
                 let (servers) = load_data();
 
                 // Status
-                println!("Bot online!");
+                println!("Bot online! ({})", Utc::now().format("%Y/%m/%d"));
                 println!("Loaded {} servers!", servers.len());
                 ctx.set_presence(Some(ActivityData::custom("2025 Policy :3c")), OnlineStatus::Online);
 

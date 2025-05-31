@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::fmt::{Display, Formatter};
 use std::sync::LockResult;
 use poise::serenity_prelude::prelude::SerenityError;

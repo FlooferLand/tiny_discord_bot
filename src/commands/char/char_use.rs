@@ -3,20 +3,34 @@ use crate::fake_user::{FakeUserError, FakeUserMaker, WebhookMessage};
 use crate::util::{consume_interaction, read_server};
 use crate::{BotError, Context};
 
-pub const SAYAS_NAME: &str = "sayas";
-pub const SAYAS_ID: u64 = 1376030760858816523;
-
-#[poise::command(slash_command, rename="sayas", aliases("say", "sayas", "say_as"))]
+/// Use a character to send a message (shorthand for `char_use`)
+#[poise::command(slash_command, rename="sayas")]
 pub async fn say_as(
     ctx: Context<'_>,
     #[description = "ID"] id: String,
     #[description = "Content"] content: String
 ) -> Result<(), BotError> {
+    Box::pin(inner(ctx, id, content)).await
+}
+
+/// Use a character to send a message
+#[poise::command(slash_command, rename="use")]
+pub(super) async fn char_use(
+    ctx: Context<'_>,
+    #[description = "ID"] id: String,
+    #[description = "Content"] content: String
+) -> Result<(), BotError> {
+    Box::pin(inner(ctx, id, content)).await
+}
+
+#[allow(dead_code)]
+async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotError> {
     let guild_id = ctx.guild_id().bot_err("No guild ID found")?;
+    let id = id.trim();
 
     // Getting the character
     let char = read_server(ctx, |server| {
-        server.characters.get(&id).bot_err("Unable to find character")?.clone().ok()
+        server.characters.get(id).bot_err("Unable to find character")?.clone().ok()
     })?;
 
     // If the hook already exists..
@@ -35,7 +49,7 @@ pub async fn say_as(
                             // Removing any invalid webhook
                             if let Ok(mut write) = ctx.data().servers.write() {
                                 let server_write = write.get_mut(&guild_id.get()).unwrap();
-                                let char_write = server_write.characters.get_mut(&id).unwrap();
+                                let char_write = server_write.characters.get_mut(id).unwrap();
                                 char_write.hooks.remove(&ctx.channel_id().get());
                             }
 
@@ -64,7 +78,7 @@ pub async fn say_as(
         // Adding the new hook to our data
         if let Ok(mut write) = ctx.data().servers.write() {
             let server_write = write.get_mut(&guild_id.get()).unwrap();
-            let char_write = server_write.characters.get_mut(&id).unwrap();
+            let char_write = server_write.characters.get_mut(id).unwrap();
             char_write.hooks.insert(ctx.channel_id().get(), hook_url.clone());
         } else {
             return Err(BotError::Str("Unable to unlock server write lock"));

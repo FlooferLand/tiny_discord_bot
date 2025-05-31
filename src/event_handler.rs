@@ -1,8 +1,8 @@
-use poise::{BoxFuture, FrameworkError};
-use crate::serenity;
-use poise::serenity_prelude::{CacheHttp, FullEvent, MessageBuilder, RoleId};
-use crate::{BotData, BotError};
 use crate::data::servers::Server;
+use crate::serenity;
+use crate::{BotData, BotError};
+use poise::serenity_prelude::{FullEvent, MessageBuilder};
+use poise::FrameworkError;
 
 pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
     match error {
@@ -13,8 +13,11 @@ pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
                 e => MessageBuilder::new().push_mono(e.to_string()).build()
             };
             let message = MessageBuilder::new()
-                .push_bold("ERROR:").push(" ").push_safe(text)
+                .push_bold("ERROR:").push(" ").push_safe(&text)
                 .build();
+
+            println!("Skill issue [{}]: \"{text}\"", ctx.author().name);
+
             ctx.send(
                 poise::CreateReply::default()
                     .ephemeral(true)
@@ -26,7 +29,7 @@ pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
 }
 
 pub async fn event_handler(
-    ctx: &serenity::Context,
+    _ctx: &serenity::Context,
     event: &FullEvent,
     _framework: poise::FrameworkContext<'_, BotData, BotError>,
     data: &BotData,
@@ -37,7 +40,7 @@ pub async fn event_handler(
                 server_write.insert(guild.id.get(), Server::default());
             }
         }
-        FullEvent::Message { new_message } => {
+        FullEvent::Message { new_message: _ } => {
             /*let Some(server) = new_message.guild_id.and_then(|a| data.servers.get(&a.get())) else {
                 return Err(anyhow!("Failed to find guild settings for guild id '{}'", new_message.guild_id.unwrap_or_default()));
             };

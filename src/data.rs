@@ -5,6 +5,7 @@ use crate::data::servers::Server;
 pub mod servers;
 
 /// Panics if it can't load the data
+#[allow(unused_parens)]
 pub fn load_data() -> (HashMap<u64, Server>)  {
 	// Loading server data
 	let mut servers = HashMap::new();
@@ -17,7 +18,7 @@ pub fn load_data() -> (HashMap<u64, Server>)  {
 		};
 		let Ok(server_id) = dir.path().file_stem().unwrap_or(dir.file_name().as_os_str()).to_string_lossy().parse::<u64>() else {
 			panic!("Failed to parse server ID");
-		};;
+		};
 		match serde_yml::from_str(server_text.as_str()) {
 			Ok(server_data) => {
 				servers.insert(server_id, server_data);

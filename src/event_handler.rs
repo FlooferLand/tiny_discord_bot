@@ -1,3 +1,4 @@
+use log::{debug, error};
 use crate::data::servers::Server;
 use crate::serenity;
 use crate::{BotData, BotError};
@@ -16,7 +17,7 @@ pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
                 .push_bold("ERROR:").push(" ").push_safe(&text)
                 .build();
 
-            println!("Skill issue [{}]: \"{text}\"", ctx.author().name);
+            debug!("Skill issue [{}]: \"{text}\"", ctx.author().name);
 
             ctx.send(
                 poise::CreateReply::default()

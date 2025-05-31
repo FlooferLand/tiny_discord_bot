@@ -4,7 +4,7 @@ mod event_handler;
 mod data;
 mod error;
 mod util;
-mod log;
+mod logger;
 
 use crate::commands::char::char_use::say_as;
 use crate::commands::info::bot_info;
@@ -18,7 +18,9 @@ use poise::serenity_prelude as serenity;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
+use log::{debug, error, info};
 use crate::commands::char::char;
+use crate::logger::Logger;
 
 struct BotData {
     pub servers: Arc<RwLock<HashMap<u64, Server>>>,
@@ -30,6 +32,7 @@ type Context<'a> = poise::Context<'a, BotData, BotError>;
 async fn main() {
     let token = std::env::var("TINY_BOT_TOKEN").expect("env 'TINY_BOT_TOKEN' should be set");
     let intents = serenity::GatewayIntents::privileged();
+    Logger::init().unwrap();
     
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
@@ -54,8 +57,9 @@ async fn main() {
                 let (servers) = load_data();
 
                 // Status
-                println!("Bot online! ({})", Utc::now().format("%Y/%m/%d"));
-                println!("Loaded {} servers!", servers.len());
+                println!();
+                info!("Bot online! ({})", Utc::now().format("%Y/%m/%d"));
+                info!("Loaded {} servers!", servers.len());
                 ctx.set_presence(Some(ActivityData::custom("2025 Policy :3c")), OnlineStatus::Online);
 
                 // Data
@@ -79,7 +83,7 @@ async fn main() {
         for (_id, runner) in shard_runners.iter() {
             runner.runner_tx.set_status(OnlineStatus::Offline);
         }
-        println!("Bot stopped!");
+        info!("Bot stopped!");
         std::process::exit(0);
     });
 }

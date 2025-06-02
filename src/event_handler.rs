@@ -1,9 +1,12 @@
 use log::debug;
 use crate::data::servers::Server;
-use crate::serenity;
+use crate::{serenity};
 use crate::{BotData, BotError};
 use poise::serenity_prelude::{FullEvent, MessageBuilder};
 use poise::FrameworkError;
+use strsim::{damerau_levenshtein};
+use crate::error::BotErrorExt;
+use crate::fuzzy::Fuzzy;
 
 pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
     match error {
@@ -30,7 +33,7 @@ pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
 }
 
 pub async fn event_handler(
-    _ctx: &serenity::Context,
+    ctx: &serenity::Context,
     event: &FullEvent,
     _framework: poise::FrameworkContext<'_, BotData, BotError>,
     data: &BotData,
@@ -41,13 +44,37 @@ pub async fn event_handler(
                 server_write.insert(guild.id.get(), Server::default());
             }
         }
-        FullEvent::Message { new_message: _ } => {
-            /*let Some(server) = new_message.guild_id.and_then(|a| data.servers.get(&a.get())) else {
-                return Err(anyhow!("Failed to find guild settings for guild id '{}'", new_message.guild_id.unwrap_or_default()));
-            };
-            
+        FullEvent::Message { new_message } => {
+            if new_message.author.id == ctx.http.get_current_user().await.bot_err()?.id {
+                return Ok(());
+            }
+
+            if new_message.channel_id == 1057519403408822283 {
+                println!("Message: '{}'", new_message.content);
+                let user_text = new_message.content.replace(|c: char| !c.is_ascii(), "");
+
+                #[derive(Debug)]
+                enum FuzzyEnum {
+                    Banning,
+                    ModMention
+                }
+                let mut fuzzy = Fuzzy::new();
+                fuzzy.add_varied(&FuzzyEnum::Banning, vec![
+                    "i'm banning you",
+                    "you're getting banned",
+                ]);
+                fuzzy.add_varied(&FuzzyEnum::ModMention, vec![
+                    "bob",
+                    "moderators",
+                    "mods",
+                ]);
+                if let Some((winning_pattern, score)) = fuzzy.best_match(&user_text, 0.3) {
+                    new_message.reply(&ctx.http, format!("```json\nSCORE:{score},\n{winning_pattern:#?}\n```")).await.bot_err()?;
+                }
+            }
+
             // Moderator role lel
-            let mod_role = RoleId::new(server.roles.moderator);
+            /*let mod_role = RoleId::new(server.roles.moderator);
             if new_message.mention_roles.contains(&mod_role) {
                 data.bob.reply_direct(ctx.http(), new_message).await;
             }*/

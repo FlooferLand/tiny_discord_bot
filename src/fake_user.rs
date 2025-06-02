@@ -39,6 +39,7 @@ pub struct FakeUser<'a> {
 }
 
 // Methods
+#[allow(dead_code)]
 impl<'a> FakeUser<'a> {
 	async fn get_user_name(http: &Http, guild: GuildId, user: &User) -> String {
 		match user.nick_in(http, guild).await {
@@ -96,6 +97,7 @@ pub struct FakeUserMaker<'a> {
 	http: &'a Http,
 	channel: ChannelId
 }
+#[allow(dead_code)]
 impl<'a> FakeUserMaker<'a> {
 	pub fn new(ctx: &'a Context) -> Self {
 		Self {

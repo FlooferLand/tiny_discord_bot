@@ -5,6 +5,7 @@ mod data;
 mod error;
 mod util;
 mod logger;
+mod fuzzy;
 
 use crate::commands::char::char_use::say_as;
 use crate::commands::info::bot_info;
@@ -31,7 +32,7 @@ type Context<'a> = poise::Context<'a, BotData, BotError>;
 #[tokio::main]
 async fn main() {
     let token = std::env::var("TINY_BOT_TOKEN").expect("env 'TINY_BOT_TOKEN' should be set");
-    let intents = serenity::GatewayIntents::privileged();
+    let intents = serenity::GatewayIntents::all();
     Logger::init().unwrap();
     
     let framework = poise::Framework::builder()

@@ -1,43 +1,60 @@
-use crate::serde::arc_rwlock_serde;
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use crate::ArcLock;
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use tokio::sync::RwLock;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Default, Debug)]
 pub struct Server {
-    #[serde(default)]
-    #[serde(with = "arc_rwlock_serde")]
-    pub characters: ArcLock<HashMap<String, ServerCharacter>>,
-
-    #[serde(default)]
-    #[serde(with = "arc_rwlock_serde")]
+    pub characters: DashMap<String, ServerCharacter>,
     pub roles: ArcLock<ServerRoles>,
-
-    #[serde(default)]
-    #[serde(with = "arc_rwlock_serde")]
     pub config: ArcLock<ServerConfig>,
 }
+impl Server {
+    pub(crate) fn from_serde(serde: SerdeServer) -> Self {
+        Self {
+            characters: serde.characters.clone(),
+            roles: ArcLock::new(RwLock::from(serde.roles.clone())),
+            config: ArcLock::new(RwLock::from(serde.config.clone()))
+        }
+    }
+    pub(crate) async fn to_serde(&self) -> SerdeServer {
+        SerdeServer {
+            characters: self.characters.clone(),
+            roles: self.roles.read().await.clone(),
+            config: self.config.read().await.clone()
+        }
+    }
+}
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub struct SerdeServer {
+    #[serde(default)] pub characters: DashMap<String, ServerCharacter>,
+    #[serde(default)] pub roles: ServerRoles,
+    #[serde(default)] pub config: ServerConfig,
+}
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct ServerCharacter {
     pub display_name: String,
     pub avatar_url: String,
     pub hooks: HashMap<u64, String>
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct ServerRoles {
     pub moderator: Option<u64>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ServerConfig {
-    pub silly_messages: bool
+    pub silly_messages: bool,
+    pub allow_user_characters: bool
 }
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            silly_messages: false
+            silly_messages: true,
+            allow_user_characters: false
         }
     }
 }

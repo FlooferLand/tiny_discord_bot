@@ -7,12 +7,29 @@ use poise::CreateReply;
 /// List all the characters
 #[poise::command(slash_command, rename="list")]
 pub(super) async fn char_list(ctx: Context<'_>, ) -> Result<(), BotError> {
+	log::debug!("char_list: {:#?}", &ctx.data().servers);
+
 	// Getting the characters
-	let characters = read_server!(ctx, characters => { characters.clone() });
+	//let characters = read_server!(ctx, characters => { characters.clone() });
+	let characters = {
+		use crate::util::DashMapReadWrite;
+		use crate::error::BotErrorMsgExt;
+		let guild_id = ctx.guild_id().bot_err("No guild ID found")?.get();
+
+		// TODO: Find a way to reuse the read lock from this
+		//crate::__init_server_if_doesnt_exist!(ctx);
+
+		let servers = &ctx.data().servers;
+		let server = servers.get(&guild_id).bot_err("Unable to find server, despite already having tried to initialize the server")?;
+		log::debug!("server: {:#?}", server.value());
+		let characters = &server.characters;
+		characters.clone()
+	};
 
 	// Building the message
 	let mut message = String::from("## Characters\n-# (`id`, `name`, `avatar_url`)\n\n");
-	for (id, char) in &characters {
+	for character in &characters {
+		let (id, char) = (character.key(), character.value());
 		message += &format!(
 			"`{id}` \"{DisplayName}\" [`avatar_url`](<{AvatarUrl}>)\n",
 			DisplayName = &char.display_name,

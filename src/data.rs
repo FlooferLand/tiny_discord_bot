@@ -1,14 +1,15 @@
-use std::collections::HashMap;
-use crate::{BotData, BotError, err_fmt};
+use crate::data::servers::SerdeServer;
 pub(crate) use crate::data::servers::Server;
+use crate::{err_fmt, BotData, BotError};
+use dashmap::DashMap;
 
 pub mod servers;
 
 /// Panics if it can't load the data
 #[allow(unused_parens)]
-pub fn load_data() -> (HashMap<u64, Server>)  {
+pub fn load_data() -> (DashMap<u64, Server>)  {
 	// Loading server data
-	let mut servers = HashMap::new();
+	let servers = DashMap::new();
 	let _ = std::fs::create_dir_all("./assets/data/servers/");
 	let servers_dir = std::fs::read_dir("./assets/data/servers/").unwrap();
 	for entry in servers_dir {
@@ -19,9 +20,9 @@ pub fn load_data() -> (HashMap<u64, Server>)  {
 		let Ok(server_id) = dir.path().file_stem().unwrap_or(dir.file_name().as_os_str()).to_string_lossy().parse::<u64>() else {
 			panic!("Failed to parse server ID");
 		};
-		match serde_yml::from_str(server_text.as_str()) {
+		match serde_yml::from_str::<SerdeServer>(server_text.as_str()) {
 			Ok(server_data) => {
-				servers.insert(server_id, server_data);
+				servers.insert(server_id, Server::from_serde(server_data));
 			}
 			Err(err) => {
 				panic!("Failed to deserialize server data: {err}");
@@ -33,11 +34,10 @@ pub fn load_data() -> (HashMap<u64, Server>)  {
 
 pub async fn save_data(data: &BotData) -> Result<(), BotError> {
 	// Saving servers
-	let server_read = data.servers.read().await;
-	for (key, server) in server_read.iter() {
-		match serde_yml::to_string(&server) {
+	for server in data.servers.iter() {
+		match serde_yml::to_string(&server.to_serde().await) {
 			Ok(out) => {
-				let path = format!("./assets/data/servers/{key}.yml");
+				let path = format!("./assets/data/servers/{}.yml", server.key());
 				let _ = std::fs::create_dir_all("./assets/data/servers/");
 				if let Err(write_err) = std::fs::write(path, out) {
 					return Err(err_fmt!("Saving error (DISK): `{write_err}`"));

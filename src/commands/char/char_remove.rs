@@ -14,7 +14,7 @@ pub(super) async fn char_remove(
 
 	ctx.send(
 		CreateReply::default()
-			.content(&format!("Removed `{id}`!"))
+			.content(format!("Removed `{id}`!"))
 			.ephemeral(true)
 	).await.bot_err()?;
 	Ok(())

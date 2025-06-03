@@ -6,7 +6,6 @@ mod error;
 mod util;
 mod logger;
 mod fuzzy;
-mod serde;
 
 use crate::commands::char::char_use::say_as;
 use crate::commands::info::bot_info;
@@ -17,10 +16,10 @@ use crate::error::{BotError, BotErrorExt};
 use crate::event_handler::{error_handler, event_handler};
 use poise::serenity_prelude::{ActivityData, OnlineStatus};
 use poise::serenity_prelude as serenity;
-use std::collections::HashMap;
 use std::sync::Arc;
 use chrono::Utc;
-use log::info;
+use dashmap::DashMap;
+use log::{debug, info};
 use tokio::sync::RwLock;
 use crate::commands::char::char;
 use crate::logger::Logger;
@@ -28,7 +27,7 @@ use crate::logger::Logger;
 pub type ArcLock<T> = Arc<RwLock<T>>;
 
 struct BotData {
-    pub servers: ArcLock<HashMap<u64, Server>>,
+    pub servers: DashMap<u64, Server>,
 }
 
 type Context<'a> = poise::Context<'a, BotData, BotError>;
@@ -67,9 +66,11 @@ async fn main() {
                 info!("Loaded {} servers!", servers.len());
                 ctx.set_presence(Some(ActivityData::custom("2025 Policy :3c")), OnlineStatus::Online);
 
+                debug!("{:#?}", servers);
+
                 // Data
                 Ok(BotData {
-                    servers: Arc::new(RwLock::new(servers)),
+                    servers,
                 })
             })
         })

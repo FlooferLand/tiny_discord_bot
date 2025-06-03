@@ -1,6 +1,6 @@
 use crate::Context;
+use dashmap::DashMap;
 use poise::CreateReply;
-pub(crate) use crate::data::save_data;
 
 /// Discord has an annoying need for apps to send a reply message to users.
 /// Calling this function at the end of a command removes that
@@ -12,21 +12,37 @@ pub async fn consume_interaction<'a>(ctx: Context<'a>) {
 	}
 }
 
+// Read/write macro util
+pub trait DashMapReadWrite<'a, K: 'a, V: 'a> {
+	async fn read(&'a self) -> &'a DashMap<K, V>;
+	async fn write(&'a self) -> &'a DashMap<K, V>;
+}
+impl<'a, K: 'a, V: 'a> DashMapReadWrite<'a, K, V> for DashMap<K, V> {
+	async fn read(&self) -> &DashMap<K, V> {
+		self
+	}
+
+	async fn write(&self) -> &DashMap<K, V> {
+		self
+	}
+}
+
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __init_server_if_doesnt_exist {
     ($ctx:expr) => {{
 	    let guild_id = $ctx.guild_id().bot_err("No guild ID found")?.get();
-	    let server_exists = $ctx.data().servers.read().await.contains_key(&guild_id);
+	    let servers = &$ctx.data().servers;
+	    let server_exists = servers.contains_key(&guild_id);
+		log::debug!("server_exists: {server_exists}");
 
 		// Initializing if it doesn't exist
 		if !server_exists {
-			let mut servers_write = $ctx.data().servers.write().await;
-			match servers_write.get_mut(&guild_id) {
+			match servers.get_mut(&guild_id) {
 				None => {
 					// Initializing a server if it doesn't exist
-					servers_write.insert(guild_id, crate::data::Server::default());
-					servers_write.get_mut(&guild_id).bot_err("Unable to initialize new server")?
+					servers.insert(guild_id, crate::data::Server::default());
+					servers.get_mut(&guild_id).bot_err("Unable to initialize new server")?
 				}
 				Some(value) => value
 			};
@@ -38,7 +54,8 @@ macro_rules! __init_server_if_doesnt_exist {
 #[macro_export]
 macro_rules! read_server {
     ($ctx:expr, $server_data:ident => $reader:block) => {{
-	    crate::read_server_inner!($ctx, server => {
+	    use $crate::util::DashMapReadWrite;
+	    $crate::read_server_inner!($ctx, server => {
 		    let $server_data = server.$server_data.read().await;
 			$reader
 	    })
@@ -49,14 +66,15 @@ macro_rules! read_server {
 #[macro_export]
 macro_rules! read_server_inner {
     ($ctx:expr, $server:ident => $reader:block) => {{
-	    use crate::error::BotErrorMsgExt;
+	    use $crate::error::BotErrorMsgExt;
 		let guild_id = $ctx.guild_id().bot_err("No guild ID found")?.get();
 
 		// TODO: Find a way to reuse the read lock from this
-		crate::__init_server_if_doesnt_exist!($ctx);
+		$crate::__init_server_if_doesnt_exist!($ctx);
 
-		let servers_read = $ctx.data().servers.read().await;
-		let $server = servers_read.get(&guild_id).bot_err("Unable to find server, despite already having tried to initialize the server")?;
+		let servers = &$ctx.data().servers;
+		let $server = servers.get(&guild_id).bot_err("Unable to find server, despite already having tried to initialize the server")?;
+		log::debug!("server: {:#?}", $server);
 		$reader
     }};
 }
@@ -66,7 +84,9 @@ macro_rules! read_server_inner {
 #[macro_export]
 macro_rules! write_server {
     ($ctx:expr, $server_data:ident => $writer:block) => {{
-	    crate::write_server_inner!($ctx, server => {
+	    use $crate::util::DashMapReadWrite;
+	    $crate::write_server_inner!($ctx, server => {
+		    #[allow(unused_mut)]
 			let mut $server_data = server.$server_data.write().await;
 		    $writer
 	    })
@@ -77,15 +97,15 @@ macro_rules! write_server {
 #[macro_export]
 macro_rules! write_server_inner {
     ($ctx:expr, $server:ident => $writer:block) => {{
-	    use crate::error::BotErrorMsgExt;
+	    use $crate::error::BotErrorMsgExt;
         let guild_id = $ctx.guild_id().bot_err("No guild ID found")?;
 		let out = {
-			let mut servers_write = $ctx.data().servers.write().await;
-			let $server = match servers_write.get_mut(&guild_id.get()) {
+			let servers = &$ctx.data().servers;
+			let $server = match servers.get_mut(&guild_id.get()) {
 				None => {
 					// Initializing a server if it doesn't exist
-					servers_write.insert(guild_id.get(), crate::data::Server::default());
-					servers_write
+					servers.insert(guild_id.get(), $crate::data::Server::default());
+					servers
 						.get_mut(&guild_id.get())
 						.bot_err("Unable to initialize new server")?
 				}
@@ -93,7 +113,7 @@ macro_rules! write_server_inner {
 			};
 			$writer
 		};
-		crate::util::save_data($ctx.data()).await?;
+		$crate::data::save_data($ctx.data()).await?;
 		out
     }};
 }

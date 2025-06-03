@@ -39,8 +39,7 @@ pub async fn event_handler(
 ) -> Result<(), BotError> {
     match event {
         FullEvent::GuildCreate { guild, .. } => {
-            let mut server_write = data.servers.write().await;
-            server_write.insert(guild.id.get(), Server::default());
+            debug!("Found guild \"{}\"", guild.name);
         }
         FullEvent::Message { new_message } => {
             if new_message.author.id == ctx.http.get_current_user().await.bot_err()?.id {

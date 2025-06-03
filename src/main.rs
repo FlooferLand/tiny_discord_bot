@@ -66,8 +66,6 @@ async fn main() {
                 info!("Loaded {} servers!", servers.len());
                 ctx.set_presence(Some(ActivityData::custom("2025 Policy :3c")), OnlineStatus::Online);
 
-                debug!("{:#?}", servers);
-
                 // Data
                 Ok(BotData {
                     servers,

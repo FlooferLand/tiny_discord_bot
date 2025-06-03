@@ -34,7 +34,6 @@ macro_rules! __init_server_if_doesnt_exist {
 	    let guild_id = $ctx.guild_id().bot_err("No guild ID found")?.get();
 	    let servers = &$ctx.data().servers;
 	    let server_exists = servers.contains_key(&guild_id);
-		log::debug!("server_exists: {server_exists}");
 
 		// Initializing if it doesn't exist
 		if !server_exists {
@@ -74,7 +73,6 @@ macro_rules! read_server_inner {
 
 		let servers = &$ctx.data().servers;
 		let $server = servers.get(&guild_id).bot_err("Unable to find server, despite already having tried to initialize the server")?;
-		log::debug!("server: {:#?}", $server);
 		$reader
     }};
 }

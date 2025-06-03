@@ -80,12 +80,6 @@ async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotE
         });
     }
 
-    // Sending out the message
-    println!(
-        "{User} said \"{content}\"",
-        User = ctx.author().display_name()
-    );
-
     consume_interaction(ctx).await;
     Ok(())
 }

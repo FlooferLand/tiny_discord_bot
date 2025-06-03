@@ -7,8 +7,6 @@ use poise::CreateReply;
 /// List all the characters
 #[poise::command(slash_command, rename="list")]
 pub(super) async fn char_list(ctx: Context<'_>, ) -> Result<(), BotError> {
-	log::debug!("char_list: {:#?}", &ctx.data().servers);
-
 	// Getting the characters
 	//let characters = read_server!(ctx, characters => { characters.clone() });
 	let characters = {
@@ -21,7 +19,6 @@ pub(super) async fn char_list(ctx: Context<'_>, ) -> Result<(), BotError> {
 
 		let servers = &ctx.data().servers;
 		let server = servers.get(&guild_id).bot_err("Unable to find server, despite already having tried to initialize the server")?;
-		log::debug!("server: {:#?}", server.value());
 		let characters = &server.characters;
 		characters.clone()
 	};

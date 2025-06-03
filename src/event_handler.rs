@@ -1,6 +1,6 @@
 use log::debug;
 use crate::data::servers::Server;
-use crate::serenity;
+use crate::{read_server, serenity};
 use crate::{BotData, BotError};
 use poise::serenity_prelude::{FullEvent, MessageBuilder};
 use poise::FrameworkError;
@@ -46,7 +46,7 @@ pub async fn event_handler(
                 return Ok(());
             }
             
-            //let silly_messages = read_server(ctx, |server| server.config.silly_messages.ok());
+            // let silly_messages = read_server!(ctx, config => { config.silly_messages });
 
             if new_message.channel_id == 1057519403408822283 {
                 println!("Message: '{}'", new_message.content);

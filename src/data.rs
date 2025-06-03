@@ -3,6 +3,7 @@ pub(crate) use crate::data::servers::Server;
 use crate::{err_fmt, BotData, BotError, Context};
 use dashmap::DashMap;
 use indoc::formatdoc;
+use poise::serenity_prelude::GuildId;
 
 pub mod servers;
 
@@ -33,11 +34,22 @@ pub fn load_data() -> (DashMap<u64, Server>)  {
 	(servers)
 }
 
-pub async fn save_data(data: &BotData) -> Result<(), BotError> {
+pub async fn save_data<'a>(ctx: Context<'a>) -> Result<(), BotError> {
 	// Saving servers
-	for server in data.servers.iter() {
+	for server in ctx.data().servers.iter() {
+		let guild = ctx.http().get_guild(GuildId::new(*server.key())).await;
 		match serde_yml::to_string(&server.to_serde().await) {
 			Ok(out) => {
+				// Fancy extra info
+				let guild_name = guild
+					.map(|guild| guild.name.clone())
+					.unwrap_or("Unknown".to_string());
+				let out = formatdoc!("
+					# guild: {guild_name}
+					{out}
+				");
+				
+				// Writing the file
 				let path = format!("./assets/data/servers/{}.yml", server.key());
 				let _ = std::fs::create_dir_all("./assets/data/servers/");
 				if let Err(write_err) = std::fs::write(path, out) {

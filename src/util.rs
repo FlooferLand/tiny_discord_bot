@@ -111,7 +111,7 @@ macro_rules! write_server_inner {
 			};
 			$writer
 		};
-		$crate::data::save_data($ctx.data()).await?;
+		$crate::data::save_data($ctx).await?;
 		out
     }};
 }

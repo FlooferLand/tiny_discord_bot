@@ -1,6 +1,6 @@
 use crate::data::servers::ServerCharacter;
-use crate::util::{consume_interaction, write_server};
-use crate::{err_fmt, BotError, Context};
+use crate::util::consume_interaction;
+use crate::{err_fmt, write_server, BotError, Context};
 use poise::serenity_prelude::UserId;
 use std::collections::HashMap;
 
@@ -50,14 +50,12 @@ pub(super) async fn char_add(
 
 	// Writing the new character
 	let new_char = ServerCharacter { display_name, avatar_url, hooks: HashMap::new() };
-	write_server(ctx, move |server| {
-		if server.characters.contains_key(&id) {
+	write_server!(ctx, characters => {
+		if characters.contains_key(&id) {
 			return Err(BotError::Str("Character already exists!"))
 		}
-
-		server.characters.insert(id.clone(), new_char);
-		Ok(())
-	})?;
+		characters.insert(id.clone(), new_char);
+	});
 
 	consume_interaction(ctx).await;
 	Ok(())

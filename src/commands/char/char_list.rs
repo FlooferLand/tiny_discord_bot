@@ -1,17 +1,14 @@
 use crate::commands::char::char_add::char_add;
 use crate::commands::char::char_use::say_as;
-use crate::error::{BotError, BotErrorExt, OkExt};
-use crate::util::read_server;
-use crate::Context;
+use crate::error::{BotError, BotErrorExt};
+use crate::{read_server, Context};
 use poise::CreateReply;
 
 /// List all the characters
 #[poise::command(slash_command, rename="list")]
 pub(super) async fn char_list(ctx: Context<'_>, ) -> Result<(), BotError> {
 	// Getting the characters
-	let characters = read_server(ctx, |server| {
-		server.characters.clone().ok()
-	})?;
+	let characters = read_server!(ctx, characters => { characters.clone() });
 
 	// Building the message
 	let mut message = String::from("## Characters\n-# (`id`, `name`, `avatar_url`)\n\n");

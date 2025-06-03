@@ -1,10 +1,9 @@
 use log::debug;
 use crate::data::servers::Server;
-use crate::{serenity};
+use crate::serenity;
 use crate::{BotData, BotError};
 use poise::serenity_prelude::{FullEvent, MessageBuilder};
 use poise::FrameworkError;
-use strsim::{damerau_levenshtein};
 use crate::error::BotErrorExt;
 use crate::fuzzy::Fuzzy;
 
@@ -40,14 +39,15 @@ pub async fn event_handler(
 ) -> Result<(), BotError> {
     match event {
         FullEvent::GuildCreate { guild, .. } => {
-            if let Ok(mut server_write) = data.servers.write() {
-                server_write.insert(guild.id.get(), Server::default());
-            }
+            let mut server_write = data.servers.write().await;
+            server_write.insert(guild.id.get(), Server::default());
         }
         FullEvent::Message { new_message } => {
             if new_message.author.id == ctx.http.get_current_user().await.bot_err()?.id {
                 return Ok(());
             }
+            
+            //let silly_messages = read_server(ctx, |server| server.config.silly_messages.ok());
 
             if new_message.channel_id == 1057519403408822283 {
                 println!("Message: '{}'", new_message.content);

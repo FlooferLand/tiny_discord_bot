@@ -1,7 +1,6 @@
-use crate::error::{BotErrorMsgExt, OkExt};
 use crate::fake_user::{FakeUserError, FakeUserMaker, WebhookMessage};
-use crate::util::{consume_interaction, read_server};
-use crate::{BotError, Context};
+use crate::util::consume_interaction;
+use crate::{read_server, write_server, BotError, Context};
 
 /// Use a character to send a message (shorthand for `char_use`)
 #[poise::command(slash_command, rename="sayas")]
@@ -25,13 +24,12 @@ pub(super) async fn char_use(
 
 #[allow(dead_code)]
 async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotError> {
-    let guild_id = ctx.guild_id().bot_err("No guild ID found")?;
     let id = id.trim();
 
     // Getting the character
-    let char = read_server(ctx, |server| {
-        server.characters.get(id).bot_err("Unable to find character")?.clone().ok()
-    })?;
+    let char = read_server!(ctx, characters => {
+        characters.get(id).bot_err("Unable to find character")?.clone()
+    });
 
     // If the hook already exists..
     let mut has_existing_hook = true;
@@ -47,11 +45,10 @@ async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotE
                             has_existing_hook = false;
 
                             // Removing any invalid webhook
-                            if let Ok(mut write) = ctx.data().servers.write() {
-                                let server_write = write.get_mut(&guild_id.get()).unwrap();
-                                let char_write = server_write.characters.get_mut(id).unwrap();
+                            write_server!(ctx, characters => {
+                                let char_write = characters.get_mut(id).unwrap();
                                 char_write.hooks.remove(&ctx.channel_id().get());
-                            }
+                            });
 
                             // debug
                             let name = ctx.channel_id().name(ctx.http()).await;
@@ -76,13 +73,10 @@ async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotE
         user.send(WebhookMessage::Text(content.to_owned())).await?;
 
         // Adding the new hook to our data
-        if let Ok(mut write) = ctx.data().servers.write() {
-            let server_write = write.get_mut(&guild_id.get()).unwrap();
-            let char_write = server_write.characters.get_mut(id).unwrap();
-            char_write.hooks.insert(ctx.channel_id().get(), hook_url.clone());
-        } else {
-            return Err(BotError::Str("Unable to unlock server write lock"));
-        }
+        write_server!(ctx, characters => {
+            let char = characters.get_mut(id).bot_err("Unable to find character")?;
+            char.hooks.insert(ctx.channel_id().get(), hook_url.clone());
+        });
     }
 
     // Sending out the message

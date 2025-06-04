@@ -1,23 +1,23 @@
+use crate::autocomplete::character;
 use crate::fake_user::{FakeUserError, FakeUserMaker, WebhookMessage};
 use crate::util::consume_interaction;
 use crate::{read_server, write_server, BotError, Context};
-use std::cmp::Ordering;
 
-/// Use a character to send a message (shorthand for `char_use`)
+/// Use a character to send a message (shorthand for `char_use`).
 #[poise::command(slash_command, rename="sayas")]
 pub async fn say_as(
     ctx: Context<'_>,
-    #[description = "ID"] #[autocomplete="id_complete"] id: String,
+    #[description = "ID"] #[autocomplete="character"] id: String,
     #[description = "Content"] content: String
 ) -> Result<(), BotError> {
     Box::pin(inner(ctx, id, content)).await
 }
 
-/// Use a character to send a message
+/// Use a character to send a message. See `/char list` for the character IDs you can use.
 #[poise::command(slash_command, rename="use")]
 pub(super) async fn char_use(
     ctx: Context<'_>,
-    #[description = "ID"] #[autocomplete="id_complete"] id: String,
+    #[description = "ID"] #[autocomplete="character"] id: String,
     #[description = "Content"] content: String
 ) -> Result<(), BotError> {
     Box::pin(inner(ctx, id, content)).await
@@ -82,24 +82,4 @@ async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotE
 
     consume_interaction(ctx).await;
     Ok(())
-}
-
-async fn id_complete<'a>(ctx: Context<'a>, partial: &str) -> Vec<String> {
-    let Some(guild_id) = ctx.guild_id() else {
-        return Vec::new();
-    };
-    let servers = &ctx.data().servers;
-    let Some(server) = servers.get(&guild_id.get()) else {
-        return Vec::new();
-    };
-    let mut chars = (server.characters.clone())
-        .iter()
-        .map(|entry| entry.key().to_owned())
-        .collect::<Vec<String>>();
-    chars.sort_by(|a, b| {
-        let a = strsim::jaro_winkler(a, partial);
-        let b = strsim::jaro_winkler(b, partial);
-        a.partial_cmp(&b).unwrap_or(Ordering::Equal)
-    });
-    chars
 }

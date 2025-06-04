@@ -1,5 +1,4 @@
 use log::debug;
-use crate::data::servers::Server;
 use crate::{read_server, serenity};
 use crate::{BotData, BotError};
 use poise::serenity_prelude::{FullEvent, MessageBuilder};

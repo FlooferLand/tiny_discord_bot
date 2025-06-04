@@ -6,6 +6,7 @@ mod error;
 mod util;
 mod logger;
 mod fuzzy;
+mod autocomplete;
 
 use crate::commands::char::char_use::say_as;
 use crate::commands::info::bot_info;
@@ -19,9 +20,10 @@ use poise::serenity_prelude as serenity;
 use std::sync::Arc;
 use chrono::Utc;
 use dashmap::DashMap;
-use log::{debug, info};
+use log::{error, info};
 use tokio::sync::RwLock;
 use crate::commands::char::char;
+use crate::commands::{post_command, pre_command};
 use crate::logger::Logger;
 
 pub type ArcLock<T> = Arc<RwLock<T>>;
@@ -37,7 +39,8 @@ async fn main() {
     let token = std::env::var("TINY_BOT_TOKEN").expect("env 'TINY_BOT_TOKEN' should be set");
     let intents = serenity::GatewayIntents::all();
     Logger::init().unwrap();
-    
+
+    // Creating the poise framework instance
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             event_handler: |ctx, event, framework, data| {
@@ -48,6 +51,8 @@ async fn main() {
                 char(), say_as(),
                 save()
             ],
+            pre_command: |ctx| Box::pin(pre_command(ctx)),
+            post_command: |ctx| Box::pin(post_command(ctx)),
             on_error: |error| Box::pin(error_handler(error)),
             .. Default::default()
         })
@@ -74,20 +79,27 @@ async fn main() {
         })
         .build();
 
-    // Starting the server
+    // Creating the client
     let mut client = serenity::ClientBuilder::new(token, intents)
         .framework(framework)
         .await.unwrap();
-    client.start().await.unwrap();
 
     // Graceful shutdown
     let shard_manager = client.shard_manager.clone();
-    let _ = ctrlc::set_handler(move || {
-        let shard_runners = shard_manager.runners.blocking_lock();
-        for (_id, runner) in shard_runners.iter() {
-            runner.runner_tx.set_status(OnlineStatus::Offline);
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
+        {
+            let shard_runners = shard_manager.runners.lock().await;
+            for (_id, runner) in shard_runners.iter() {
+                runner.runner_tx.set_status(OnlineStatus::Offline);
+            }
         }
+        shard_manager.shutdown_all().await;
         info!("Bot stopped!");
-        std::process::exit(0);
     });
+
+    // Starting the client
+    if let Err(why) = client.start().await {
+        error!("Client error: {:?}", why);
+    }
 }

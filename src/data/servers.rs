@@ -6,6 +6,7 @@ use tokio::sync::RwLock;
 
 #[derive(Default, Debug)]
 pub struct Server {
+    pub id: u64,
     pub characters: DashMap<String, ServerCharacter>,
     pub roles: ArcLock<ServerRoles>,
     pub config: ArcLock<ServerConfig>,
@@ -13,6 +14,7 @@ pub struct Server {
 impl Server {
     pub(crate) fn from_serde(serde: SerdeServer) -> Self {
         Self {
+            id: serde.id,
             characters: serde.characters.clone(),
             roles: ArcLock::new(RwLock::from(serde.roles.clone())),
             config: ArcLock::new(RwLock::from(serde.config.clone()))
@@ -20,6 +22,7 @@ impl Server {
     }
     pub(crate) async fn to_serde(&self) -> SerdeServer {
         SerdeServer {
+            id: self.id,
             characters: self.characters.clone(),
             roles: self.roles.read().await.clone(),
             config: self.config.read().await.clone()
@@ -28,6 +31,7 @@ impl Server {
 }
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct SerdeServer {
+    #[serde(skip)] pub id: u64,
     #[serde(default)] pub characters: DashMap<String, ServerCharacter>,
     #[serde(default)] pub roles: ServerRoles,
     #[serde(default)] pub config: ServerConfig,

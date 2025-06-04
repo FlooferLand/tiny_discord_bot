@@ -13,10 +13,9 @@ codegen-units = 1
 #lazy_static = "1.5"
 #chrono = "0.4"
 poise = "0.6"
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "signal"] }
 serde = "1.0"
 serde_yml = "0.0"
-ctrlc = { version = "3.4", features = ["termination"] }
 const_format = "0.2"
 #pretty_yaml = "0.5"
 #pest = "2.8"

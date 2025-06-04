@@ -3,6 +3,7 @@ use crate::util::consume_interaction;
 use crate::{err_fmt, write_server, BotError, Context};
 use poise::serenity_prelude::UserId;
 use std::collections::HashMap;
+use indoc::formatdoc;
 
 const VALID_IMAGE_TYPES: [&str; 4] = ["webp", "png", "jpg", "jpeg"];
 
@@ -39,7 +40,12 @@ pub(super) async fn char_add(
                     None => user.default_avatar_url()
                 }
             } else {
-                return Err(err_fmt!("It says '{}' doofus, input a valid URL!\nI secretly do possess the ability of parsing user IDs, but you didn't even give me a valid ID!", stringify!(avatar_url)));
+                return Err(BotError::String(formatdoc! {"
+                    It says '{url}' doofus, input a valid URL!
+	                I secretly do possess the ability of parsing user IDs, but you didn't even give me a valid ID!
+                    ",
+	                url = stringify!(avatar_url)
+                }));
             }
         } else {
             return Err(err_fmt!("It says '{}' doofus, input a valid URL!", stringify!(avatar_url)));

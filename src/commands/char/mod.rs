@@ -20,7 +20,9 @@ use char_remove::char_remove;
 		"char_use",
 		"char_list",
 		"char_remove"
-	)
+	),
+	category = "Character",
+	subcommand_required
 )]
 pub async fn char(ctx: Context<'_>, ) -> Result<(), BotError> {
 	ctx.send(CreateReply::default().content("Use a subcommand!").ephemeral(true)).await.bot_err()?;

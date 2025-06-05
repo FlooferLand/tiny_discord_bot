@@ -8,6 +8,7 @@ mod logger;
 mod fuzzy;
 mod autocomplete;
 
+use std::collections::HashSet;
 use crate::commands::char::char_use::say_as;
 use crate::commands::info::bot_info;
 use crate::commands::save::save;
@@ -15,7 +16,7 @@ use crate::data::load_data;
 use crate::data::servers::Server;
 use crate::error::{BotError, BotErrorExt};
 use crate::event_handler::{error_handler, event_handler};
-use poise::serenity_prelude::{ActivityData, OnlineStatus};
+use poise::serenity_prelude::{ActivityData, OnlineStatus, UserId};
 use poise::serenity_prelude as serenity;
 use std::sync::Arc;
 use chrono::Utc;
@@ -25,6 +26,7 @@ use log::{error, info};
 use tokio::sync::RwLock;
 use crate::commands::char::char;
 use crate::commands::{post_command, pre_command};
+use crate::commands::help::help;
 use crate::logger::Logger;
 
 pub type ArcLock<T> = Arc<RwLock<T>>;
@@ -51,11 +53,16 @@ async fn main() {
             commands: vec![
                 bot_info(),
                 char(), say_as(),
-                save()
+                save(), help()
             ],
             pre_command: |ctx| Box::pin(pre_command(ctx)),
             post_command: |ctx| Box::pin(post_command(ctx)),
             on_error: |error| Box::pin(error_handler(error)),
+            owners: {
+                let mut set = HashSet::new();
+                set.insert(UserId::new(792764829689315349));
+                set
+            },
             .. Default::default()
         })
         .setup(|ctx, _ready, framework| {

@@ -20,6 +20,7 @@ use poise::serenity_prelude as serenity;
 use std::sync::Arc;
 use chrono::Utc;
 use dashmap::DashMap;
+use dotenvy::dotenv;
 use log::{error, info};
 use tokio::sync::RwLock;
 use crate::commands::char::char;
@@ -36,6 +37,7 @@ type Context<'a> = poise::Context<'a, BotData, BotError>;
 
 #[tokio::main]
 async fn main() {
+    dotenv().unwrap();
     let token = std::env::var("TINY_BOT_TOKEN").expect("env 'TINY_BOT_TOKEN' should be set");
     let intents = serenity::GatewayIntents::all();
     Logger::init().unwrap();

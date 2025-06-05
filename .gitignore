@@ -1,5 +1,11 @@
+# Secret
 assets/data/servers/
 Secrets.toml
+.env
+
+# Profiling
+flamegraph.svg
+profile.json.gz
 
 # Rust
 /target

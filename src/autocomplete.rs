@@ -12,15 +12,24 @@ pub async fn character<'a>(ctx: Context<'a>, partial: &str) -> Vec<String> {
 	let Some(server) = servers.get(&guild_id.get()) else {
 		return Vec::new();
 	};
-	let mut chars = server.characters.clone()
+	let mut chars = server.characters
 		.iter()
-		.map(|entry| entry.key().clone())
+		.filter_map(|e| {
+			let e = e.key();
+			if e.contains(&partial.to_ascii_lowercase()) {
+				Some(e.clone())
+			} else {
+				None
+			}
+		})
 		.collect::<Vec<String>>();
-	chars.sort_by(|a, b| {
-		let a = strsim::jaro_winkler(a, partial);
-		let b = strsim::jaro_winkler(b, partial);
-		a.partial_cmp(&b).unwrap_or(Ordering::Equal)
-	});
+	if chars.len() > 10 {
+		chars.sort_by(|a, b| {
+			let a = strsim::jaro_winkler(a, partial);
+			let b = strsim::jaro_winkler(b, partial);
+			a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+		});
+	}
 
 	chars
 }

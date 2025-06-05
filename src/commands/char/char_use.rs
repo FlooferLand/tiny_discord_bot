@@ -1,6 +1,5 @@
 use crate::autocomplete::character;
 use crate::fake_user::{FakeUserError, FakeUserMaker, WebhookMessage};
-use crate::util::consume_interaction;
 use crate::{read_server, write_server, BotError, Context};
 
 /// Use a character to send a message (shorthand for `char_use`).
@@ -10,7 +9,7 @@ pub async fn say_as(
     #[description = "ID"] #[autocomplete="character"] id: String,
     #[description = "Content"] content: String
 ) -> Result<(), BotError> {
-    Box::pin(inner(ctx, id, content)).await
+    command(ctx, id, content).await
 }
 
 /// Use a character to send a message. See `/char list` for the character IDs you can use.
@@ -20,11 +19,11 @@ pub(super) async fn char_use(
     #[description = "ID"] #[autocomplete="character"] id: String,
     #[description = "Content"] content: String
 ) -> Result<(), BotError> {
-    Box::pin(inner(ctx, id, content)).await
+    command(ctx, id, content).await
 }
 
 #[allow(dead_code)]
-async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotError> {
+async fn command(ctx: Context<'_>, id: String, content: String) -> Result<(), BotError> {
     let id = id.trim();
 
     // Getting the character
@@ -79,7 +78,5 @@ async fn inner(ctx: Context<'_>, id: String, content: String) -> Result<(), BotE
             char.hooks.insert(ctx.channel_id().get(), hook_url.clone());
         });
     }
-
-    consume_interaction(ctx).await;
     Ok(())
 }

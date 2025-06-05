@@ -1,11 +1,16 @@
 use log::debug;
-use crate::{read_server, serenity};
+use crate::{send_message_str, serenity, Context};
 use crate::{BotData, BotError};
 use poise::serenity_prelude::{FullEvent, MessageBuilder};
 use poise::FrameworkError;
 use crate::error::BotErrorExt;
 use crate::fuzzy::Fuzzy;
 
+// TODO: FIXME: Currently read_server and write_server require the ? operator to work
+async fn send_message_wrapper<'a>(ctx: Context<'a>, message: String) -> Result<(), BotError> {
+    send_message_str!(ctx, message)?;
+    Ok(())
+}
 pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
     match error {
         FrameworkError::Command { error, ctx, .. } => {
@@ -17,14 +22,8 @@ pub async fn error_handler(error: FrameworkError<'_, BotData, BotError>) {
             let message = MessageBuilder::new()
                 .push_bold("ERROR:").push(" ").push_safe(&text)
                 .build();
-
             debug!("Skill issue [{}]: \"{text}\"", ctx.author().name);
-
-            ctx.send(
-                poise::CreateReply::default()
-                    .ephemeral(true)
-                    .content(message)
-            ).await.map(|_| ()).unwrap()
+            send_message_wrapper(ctx, message).await.unwrap();
         },
         error => poise::builtins::on_error(error).await.unwrap(),
     };

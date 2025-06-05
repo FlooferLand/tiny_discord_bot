@@ -8,6 +8,7 @@ use tokio::sync::RwLock;
 pub struct Server {
     pub id: u64,
     pub characters: DashMap<String, ServerCharacter>,
+    pub channels: ArcLock<ServerChannels>,
     pub roles: ArcLock<ServerRoles>,
     pub config: ArcLock<ServerConfig>,
 }
@@ -16,6 +17,7 @@ impl Server {
         Self {
             id: serde.id,
             characters: serde.characters.clone(),
+            channels: ArcLock::new(RwLock::from(serde.channels.clone())),
             roles: ArcLock::new(RwLock::from(serde.roles.clone())),
             config: ArcLock::new(RwLock::from(serde.config.clone()))
         }
@@ -24,6 +26,7 @@ impl Server {
         SerdeServer {
             id: self.id,
             characters: self.characters.clone(),
+            channels: self.channels.read().await.clone(),
             roles: self.roles.read().await.clone(),
             config: self.config.read().await.clone()
         }
@@ -33,6 +36,7 @@ impl Server {
 pub struct SerdeServer {
     #[serde(skip)] pub id: u64,
     #[serde(default)] pub characters: DashMap<String, ServerCharacter>,
+    #[serde(default)] pub channels: ServerChannels,
     #[serde(default)] pub roles: ServerRoles,
     #[serde(default)] pub config: ServerConfig,
 }
@@ -47,6 +51,11 @@ pub struct ServerCharacter {
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct ServerRoles {
     pub moderator: Option<u64>
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct ServerChannels {
+    pub bots: Option<u64>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

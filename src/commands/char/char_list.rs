@@ -1,7 +1,7 @@
 use crate::commands::char::char_add::char_add;
 use crate::commands::char::char_use::say_as;
 use crate::error::{BotError, BotErrorExt};
-use crate::{command_str, read_server, Context};
+use crate::{command_str, read_server, send_message, Context};
 use poise::CreateReply;
 use poise::serenity_prelude::{CreateEmbed, CreateEmbedFooter};
 use crate::commands::char::char;
@@ -35,6 +35,6 @@ pub(super) async fn char_list(ctx: Context<'_>) -> Result<(), BotError> {
 	}
 
 	// Sending the message
-	ctx.send(reply).await.bot_err()?;
+	send_message!(ctx, reply)?;
 	Ok(())
 }

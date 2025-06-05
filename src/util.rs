@@ -53,6 +53,7 @@ macro_rules! __init_server_if_doesnt_exist {
 #[macro_export]
 macro_rules! read_server {
     ($ctx:expr, $server_data:ident => $reader:block) => {{
+	    #[allow(unused_imports)]
 	    use $crate::util::DashMapReadWrite;
 	    $crate::read_server_inner!($ctx, server => {
 		    let $server_data = server.$server_data.read().await;
@@ -129,5 +130,35 @@ macro_rules! command_str {
     ($command:expr) => {{
 	    let command: String = $command.name;
 	    format!("`/{command}`")
+    }};
+}
+
+#[macro_export]
+macro_rules! send_message {
+    ($ctx:expr, $create_reply:expr) => {{
+	    let reply: poise::CreateReply = $create_reply;
+	    let mut reply = reply.reply(true);
+
+	    let bots_channel = $crate::read_server!($ctx, channels => { channels.bots });
+	    if let Some(channel) = bots_channel {
+			if $ctx.channel_id().get() == channel {
+				reply.ephemeral = Some(false);
+			}
+		}
+	    $ctx.send(reply).await.bot_err()
+    }};
+}
+#[macro_export]
+macro_rules! send_message_str {
+    ($ctx:expr, $text:expr) => {{
+	    let mut reply = poise::CreateReply::default().content($text).reply(true);
+
+	    let bots_channel = $crate::read_server!($ctx, channels => { channels.bots });
+	    if let Some(channel) = bots_channel {
+		    if $ctx.channel_id().get() == channel {
+			    reply.ephemeral = Some(false);
+		    }
+	    }
+	    $ctx.send(reply).await.bot_err()
     }};
 }

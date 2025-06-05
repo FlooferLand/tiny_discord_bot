@@ -1,5 +1,5 @@
 use crate::error::BotErrorExt;
-use crate::{BotError, Context};
+use crate::{send_message_str, BotError, Context};
 use indoc::formatdoc;
 
 /// Some information about teh bot!
@@ -13,6 +13,6 @@ pub async fn bot_info(ctx: Context<'_>) -> Result<(), BotError> {
         "#,
         Version = env!("CARGO_PKG_VERSION")
     );
-    ctx.reply(message).await.bot_err()?;
+    send_message_str!(ctx, message)?;
     Ok(())
 }

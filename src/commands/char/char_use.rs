@@ -5,7 +5,7 @@ use crate::{read_server, write_server, BotError, Context};
 use crate::util::consume_interaction;
 
 /// Use a character to send a message (shorthand for `char_use`).
-#[poise::command(slash_command, rename="sayas")]
+#[poise::command(slash_command, rename="as")]
 pub async fn say_as(
     ctx: Context<'_>,
     #[description = "ID"] #[autocomplete="character"] id: String,

@@ -1,6 +1,8 @@
+use log::debug;
 use crate::autocomplete::character;
 use crate::fake_user::{FakeUserError, FakeUserMaker, WebhookMessage};
 use crate::{read_server, write_server, BotError, Context};
+use crate::util::consume_interaction;
 
 /// Use a character to send a message (shorthand for `char_use`).
 #[poise::command(slash_command, rename="sayas")]
@@ -53,7 +55,7 @@ async fn command(ctx: Context<'_>, id: String, content: String) -> Result<(), Bo
                             // debug
                             let name = ctx.channel_id().name(ctx.http()).await;
                             if let Ok(name) = name {
-                                println!("Invalid webhook found. Removing {}..", name);
+                                debug!("Invalid webhook found. Removing hook for channel '{}'..", name);
                             }
                         }
                     }
@@ -69,14 +71,15 @@ async fn command(ctx: Context<'_>, id: String, content: String) -> Result<(), Bo
     if !has_existing_hook {
         let user = FakeUserMaker::new(&ctx)
             .new_hook(&char.display_name, &char.avatar_url, false).await?;
-        let hook_url = user.get_webhook_url().unwrap();
         user.send(WebhookMessage::Text(content.to_owned())).await?;
 
         // Adding the new hook to our data
         write_server!(ctx, characters => {
             let mut char = characters.get_mut(id).bot_err("Unable to find character")?;
-            char.hooks.insert(ctx.channel_id().get(), hook_url.clone());
+            char.hooks.insert(ctx.channel_id().get(), user.get_webhook_url().unwrap().clone());
         });
     }
+    
+    consume_interaction(ctx).await;
     Ok(())
 }

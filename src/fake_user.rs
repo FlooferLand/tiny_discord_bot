@@ -5,7 +5,7 @@ use crate::serenity::model::channel::Message;
 use crate::serenity::model::id::ChannelId;
 use crate::serenity::model::prelude::User;
 use crate::Context;
-use poise::serenity_prelude::{CreateAttachment, CreateWebhook, GuildId};
+use poise::serenity_prelude::{Builder, CreateAttachment, CreateWebhook, GuildId};
 
 // let name = format!(
 //     "{name}{0}˞",
@@ -29,13 +29,13 @@ pub enum FakeUserError {
 #[allow(unused)]
 pub struct FakeUser<'a> {
 	webhook_url: Option<String>,
-	avatar_url: String,
 	name: String,
 	temporary: bool,
 
 	// From the FakeUserMaker
 	http: &'a Http,
-	channel: ChannelId
+	channel: ChannelId,
+	avatar_url: String
 }
 
 // Methods
@@ -68,8 +68,10 @@ impl<'a> FakeUser<'a> {
 		let webhook = self.http.get_webhook_from_url(&hook_url).await.bot_err()?;
 
 	    let content = match content {
-		    WebhookMessage::Text(text) => ExecuteWebhook::new().content(text),
-		    WebhookMessage::Builder(b) => b,
+		    WebhookMessage::Text(text) => ExecuteWebhook::new()
+			    .avatar_url(&self.avatar_url)
+			    .content(text),
+		    WebhookMessage::Builder(b) => b.avatar_url(&self.avatar_url),
 	    };
 
         // Running the webhook
@@ -108,43 +110,49 @@ impl<'a> FakeUserMaker<'a> {
 
     pub async fn new_hook(self, name: &str, avatar_url: &str, temporary: bool) -> Result<FakeUser<'a>, BotError> {
 	    let avatar = CreateAttachment::url(self.http, &avatar_url).await.bot_err()?;
-	    let builder = CreateWebhook::new(name).avatar(&avatar);
-	    let webhook = self.channel.create_webhook(self.http, builder).await.bot_err()?;
+	    let webhook = CreateWebhook::new(name)
+		    .avatar(&avatar)
+		    .execute(self.http, self.channel).await.bot_err()?;
 	    Ok(FakeUser {
-		    temporary,
 		    name: name.to_string(),
-		    avatar_url: avatar_url.to_string(),
 		    webhook_url: Some(webhook.url().bot_err()?),
+		    temporary,
+
 		    http: self.http,
-		    channel: self.channel
+		    channel: self.channel,
+		    avatar_url: avatar_url.to_string()
 	    })
     }
 
 	/// **NOTE:** If the webhook provided doesn't exist,
 	/// it will return [`FakeUserError::InvalidWebhook`].
 	pub async fn existing(self, webhook_url: &str, backup_name: &str, backup_avatar_url: &str) -> Result<FakeUser<'a>, BotError> {
-		if let Err(_) = self.http.get_webhook_from_url(webhook_url).await {
-			return Err(BotError::FakeUser(FakeUserError::InvalidWebhook { webhook_url: webhook_url.to_string() }))
-		};
+		let _webhook = match self.http.get_webhook_from_url(webhook_url).await {
+			Ok(hook) => Ok(hook),
+			Err(_err) => Err(BotError::FakeUser(FakeUserError::InvalidWebhook { webhook_url: webhook_url.to_string() }))
+		}?;
+
 		Ok(FakeUser {
-			temporary: false,
 			name: backup_name.to_string(),
 			webhook_url: Some(webhook_url.to_string()),
-			avatar_url: backup_avatar_url.to_string(),
+			temporary: false,
+
 			http: self.http,
-			channel: self.channel
+			channel: self.channel,
+			avatar_url: backup_avatar_url.to_owned(),
 		})
 	}
 
 	pub async fn user(self, user: User) -> Result<FakeUser<'a>, BotError> {
 		let guild = self.channel.to_channel(self.http).await.bot_err()?.guild().bot_err("Failed to find guild")?.guild_id;
 		Ok(FakeUser {
+			name: FakeUser::get_user_name(&self.http, guild, &user).await,
 			webhook_url: None,
 			temporary: true,
-			name: FakeUser::get_user_name(&self.http, guild, &user).await,
-			avatar_url: FakeUser::get_user_avatar_url(user),
+			
 			http: self.http,
-			channel: self.channel
+			channel: self.channel,
+			avatar_url: FakeUser::get_user_avatar_url(user),
 		})
 	}
 

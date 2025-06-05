@@ -116,12 +116,18 @@ macro_rules! write_server_inner {
     }};
 }
 
-// String manipulation
+/// Make a command into a string
+/// TODO: Format this like: "</name:id>"
+/// TODO: Generate parameter examples
 #[macro_export]
 macro_rules! command_str {
-    ($id:ident, $name:ident) => {{
-	    const NAME: &str = $name;
-	    const ID: u64 = $id;
-	    const_format::concatcp!("</", NAME, ":" , ID, ">")
+    ($parent:expr, $command:expr) => {{
+	    let parent: String = $parent.name;
+	    let command: String = $command.name;
+	    format!("`/{parent} {command}`")
+    }};
+    ($command:expr) => {{
+	    let command: String = $command.name;
+	    format!("`/{command}`")
     }};
 }
